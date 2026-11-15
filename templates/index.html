@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>News Search</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 30px auto; }
+    input { width: 400px; padding: 6px; }
+    select, button { padding: 6px; }
+    .hit { margin-bottom: 18px; }
+    .info { color: gray; font-size: 13px; }
+    em { background: yellow; font-style: normal; }
+  </style>
+</head>
+<body>
+  <h1>Climate Change & Bikeability News Search</h1>
+
+  <form action="/">
+    <input type="text" name="q" value="{{ keywords }}" placeholder="Enter keywords">
+    <select name="logic">
+      <option value="boolean" {% if logic == "boolean" %}selected{% endif %}>Boolean AND (no ranking)</option>
+      <option value="ranked" {% if logic == "ranked" %}selected{% endif %}>Ranked OR (tf*idf / BM25)</option>
+      <option value="phrase" {% if logic == "phrase" %}selected{% endif %}>Phrase search</option>
+    </select>
+    <button type="submit">Search</button>
+  </form>
+
+  {% if keywords %}
+    <p><b>{{ hits|length }}</b> documents found for "{{ keywords }}"</p>
+    {% for hit in hits %}
+      {% set doc = hit["_source"] %}
+      <div class="hit">
+        <a href="{{ doc.url }}" target="_blank"><b>{{ loop.index }}. {{ doc.title }}</b></a><br>
+        <span class="info">{{ hit["_id"] }} | {{ doc.source }} | {{ doc.date }} | {{ doc.language }} | score: {{ hit["_score"]|round(3) }}</span><br>
+        {% if hit.highlight %}
+          ... {{ hit.highlight.text[0]|safe }} ...
+        {% else %}
+          {{ doc.text[:200] }} ...
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% endif %}
+</body>
+</html>
