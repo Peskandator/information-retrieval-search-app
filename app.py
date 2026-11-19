@@ -1,3 +1,5 @@
+import sys
+import json
 from flask import Flask, render_template, request
 from elasticsearch import Elasticsearch
 
@@ -17,17 +19,36 @@ def build_query(keywords, logic):
         "query": keywords, "fields": ["title", "text"], "type": "phrase"}}
 
 
+def run_search(keywords, logic):
+    query = build_query(keywords, logic)
+    print(json.dumps(query, indent=2))
+    result = es.search(index="news", query=query, size=20,
+                       highlight={"fields": {"text": {}}})
+    return result["hits"]["hits"]
+
+
 @app.route("/")
 def search():
     keywords = request.args.get("q", "")
     logic = request.args.get("logic", "ranked")
     hits = []
     if keywords:
-        result = es.search(index="news", query=build_query(keywords, logic), size=20,
-                           highlight={"fields": {"text": {}}})
-        hits = result["hits"]["hits"]
+        hits = run_search(keywords, logic)
     return render_template("index.html", keywords=keywords, logic=logic, hits=hits)
 
 
+def main():
+    if len(sys.argv) < 2:
+        app.run()
+        return
+
+    keywords = sys.argv[1]
+    logic = sys.argv[2] if len(sys.argv) > 2 else "ranked"
+    hits = run_search(keywords, logic)
+    print(len(hits), "hits")
+    for hit in hits:
+        print(hit["_id"], round(hit["_score"], 3), hit["_source"]["title"])
+
+
 if __name__ == "__main__":
-    app.run()
+    main()
